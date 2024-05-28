@@ -131,7 +131,7 @@ def transform(
     Transform the data based on the given query and return the transformed dataframe.
 
     Args:
-        query (str): The query string.
+        query (str): The query string. It needs to start with "Sample -> ". The end should be the aggregation column, contained in df_agg.
         df_sample (pl.DataFrame): The sample dataframe. Should contain at least columns 'RINPERSOON' and 'RINPERSOONS'.
         df_agg (pl.DataFrame): The aggregation dataframe. Should contain columns 'RINPERSOON', 'RINPERSOONS', and the aggregation column.
         year (int): The year for the data.
