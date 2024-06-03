@@ -72,6 +72,8 @@ def check_context(context: str) -> Tuple[str, Set[int]]:
     Returns:
         Tuple[str, Set[int]]: A tuple containing the context and a set of types.
     """
+
+    # Filter the context and the types: Family[301, 302, 303] -> Family, {301, 302, 303}
     context, set_types = context.split('[')
     context = context.strip()
     set_types = set_types.replace(']', '').strip()
@@ -93,6 +95,8 @@ def check_last_version(path: Union[str, Path]) -> int:
     Returns:
         int: The latest version number.
     """
+
+    # The files end on V1, V2, V3, etc. We need to extract the number and return the maximum
     path = Path(path)
     versions = [int(f.stem.split('V')[-1]) for f in path.glob('*.csv')]
     if not versions:
@@ -112,9 +116,9 @@ def format_path(context: str, year: int, cbsdata_path: str = 'cbsdata/Bevolking'
         Tuple[str, Set[int]]: A tuple containing the formatted path and the set of types.
     """
     context, set_types = check_context(context)
-    path_context = context2path[context]
-    version = check_last_version(f'{cbsdata_path}/{path_context}')
-    path_context = f'{cbsdata_path}/{path_context}/{path_context}{year}V{version}.csv'
+    name_path_context = context2path[context]
+    version = check_last_version(f'{cbsdata_path}/{name_path_context}')
+    path_context = f'{cbsdata_path}/{name_path_context}/{name_path_context}{year}V{version}.csv'
     return path_context, set_types
 
 def transform(
@@ -156,27 +160,37 @@ def transform(
     validate_columns(df_sample, ['RINPERSOON', 'RINPERSOONS'])
     validate_columns(df_agg, ['RINPERSOON', 'RINPERSOONS', contexts[-1]])
 
+    # Prepare the dataframe with the sample data. Duplicate ID columsn to recover the sample IDs after merging
     df = (prepare_dataframe(df_sample, lazy)
           .with_columns(
               pl.col('RINPERSOON').alias('RINPERSOON_sample'),
               pl.col('RINPERSOONS').alias('RINPERSOONS_sample')
           )
           )
-    df_agg = prepare_dataframe(df_agg, lazy)
+
+    # For consistency in the joins
     if lazy:
         df_sample = pl.LazyFrame(df_sample)
     else:
         df_sample = pl.DataFrame(df_sample)
 
+    # Prepare the aggregation dataframe
+    df_agg = prepare_dataframe(df_agg, lazy)
+
+
+    # For each contaxt
     for context in contexts[1:-1]:
+        # Read the edgelist
         path_context, set_types = format_path(context, year, cbsdata_path)
         df_context = load_context_data(path_context, set_types, lazy)
+        # Merge with previous data
         df = merge_context_data(df, df_context)
+        # Print statistics (only available if not lazy)
         if not lazy:
             logger.info(f'Context {context} added. New data size: {df.shape}')
 
+    # Finally, aggregate data and join with the original sample
     df = aggregate_data(df, df_agg, contexts[-1], agg_func)
-
     df = df_sample.join(df, on=['RINPERSOON', 'RINPERSOONS'], how='left')
 
     if lazy:
@@ -184,6 +198,7 @@ def transform(
 
     if return_pandas:
         return df.to_pandas()
+    
     return df
 
 def validate_columns(df: pl.DataFrame, columns: list):
@@ -232,7 +247,10 @@ def load_context_data(path: str, set_types: Set[int], lazy: bool) -> pl.DataFram
         pl.DataFrame: The loaded context data.
     """
     df_context = pl.scan_csv(path) if lazy else pl.read_csv(path)
-    return df_context.filter(pl.col('RELATIE').is_in(set_types)).select(['RINPERSOON', 'RINPERSOONS', 'RINPERSOONRELATIE', 'RINPERSOONSRELATIE'])
+    return (df_context
+            .filter(pl.col('RELATIE').is_in(set_types))
+            .select(['RINPERSOON', 'RINPERSOONS', 'RINPERSOONRELATIE', 'RINPERSOONSRELATIE'])
+            )
 
 def merge_context_data(df: pl.DataFrame, df_context: pl.DataFrame) -> pl.DataFrame:
     """
@@ -245,8 +263,10 @@ def merge_context_data(df: pl.DataFrame, df_context: pl.DataFrame) -> pl.DataFra
     Returns:
         pl.DataFrame: The merged dataframe.
     """
-    df = df.join(df_context, on=['RINPERSOON', 'RINPERSOONS'], how='inner').select(['RINPERSOON_sample', 'RINPERSOONS_sample', 'RINPERSOONRELATIE', 'RINPERSOONSRELATIE'])
-    return df.rename({'RINPERSOONRELATIE': 'RINPERSOON', 'RINPERSOONSRELATIE': 'RINPERSOONS'})
+    return (df.join(df_context, on=['RINPERSOON', 'RINPERSOONS'], how='inner')
+            .select(['RINPERSOON_sample', 'RINPERSOONS_sample', 'RINPERSOONRELATIE', 'RINPERSOONSRELATIE'])
+            .rename({'RINPERSOONRELATIE': 'RINPERSOON', 'RINPERSOONSRELATIE': 'RINPERSOONS'})
+            )
 
 def aggregate_data(df: pl.DataFrame, df_agg: pl.DataFrame, agg_col: str, agg_func: Union[pl.Expr, callable]) -> pl.DataFrame:
     """
@@ -261,6 +281,9 @@ def aggregate_data(df: pl.DataFrame, df_agg: pl.DataFrame, agg_col: str, agg_fun
     Returns:
         pl.DataFrame: The aggregated dataframe.
     """
-    df = df.join(df_agg, on=['RINPERSOON', 'RINPERSOONS'], how='inner')
-    df = df.groupby(['RINPERSOON_sample', 'RINPERSOONS_sample']).agg(agg_func(agg_col)).rename({'RINPERSOON_sample': 'RINPERSOON', 'RINPERSOONS_sample': 'RINPERSOONS'})
-    return df
+    return (df.join(df_agg, on=['RINPERSOON', 'RINPERSOONS'], how='inner')
+            .groupby(['RINPERSOON_sample', 'RINPERSOONS_sample'])
+            .agg(agg_func(agg_col))
+            .rename({'RINPERSOON_sample': 'RINPERSOON', 'RINPERSOONS_sample': 'RINPERSOONS'})
+            )
+    
