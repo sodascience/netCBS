@@ -63,7 +63,6 @@ def create_synthetic_data(context, year, N, v=1):
     df.write_csv(outpath)
 
 
-
 if __name__ == "__main__":
     create_synthetic_data("Family", 2021, 1_000_000)
     create_synthetic_data("Colleagues", 2021, 1_000_000)
