@@ -20,7 +20,7 @@ context2types = {
 }
 
 # Create synthetic data for each type of context
-def create_synthetic_data(context, year, N, v=1):
+def create_synthetic_data(context, year, N, v=1, outpath="cbsdata/Bevolking"):
     """
     Create synthetic data for a given context and year
 
@@ -41,15 +41,15 @@ def create_synthetic_data(context, year, N, v=1):
 
     """
     path = context2path[context]
-    outpath = f"cbsdata/Bevolking/{path}/{path}{year}V{v}.csv"
+    outpath = f"{outpath}/{path}/{path}{year}V{v}.csv"
     # create folder if it does not exist using Pathlib
     Path(outpath).parent.mkdir(parents=True, exist_ok=True)
     set_types = context2types[context]
 
     # Create a dataframe with 3 columns, RINPERSOON, RINPERSOONS (R, S) and RELATIE
     N_extra = int(N*1.2)
-    RP_ego = random.choice(range(100_000_000, 101_000_000), N_extra, replace=True)
-    RP_alter = random.choice(range(100_000_000, 101_000_000), N_extra, replace=True)
+    RP_ego = random.choice(range(100_000_000, 100_500_000), N_extra, replace=True)
+    RP_alter = random.choice(range(100_000_000, 100_500_000), N_extra, replace=True)
     relatie = random.choice(set_types, N_extra, replace=True)
     df = pl.DataFrame({"RINPERSOON": RP_ego, "RINPERSOONS":  ["R"]*N_extra,
                        "RINPERSOONRELATIE": RP_alter, "RINPERSOONSRELATIE":  ["R"]*N_extra,
@@ -64,8 +64,9 @@ def create_synthetic_data(context, year, N, v=1):
 
 
 if __name__ == "__main__":
-    create_synthetic_data("Family", 2021, 1_000_000)
-    create_synthetic_data("Colleagues", 2021, 1_000_000)
-    create_synthetic_data("Neighbors", 2021, 1_000_000)
-    create_synthetic_data("Schoolmates", 2021, 1_000_000)
-    create_synthetic_data("Housemates", 2021, 1_000_000)
+    # Add a CLI to this script
+    create_synthetic_data("Family", 2021, 1_000_000, outpath="cbsdata/Bevolking")
+    create_synthetic_data("Colleagues", 2021, 1_000_000, outpath="cbsdata/Bevolking")
+    create_synthetic_data("Neighbors", 2021, 1_000_000, outpath="cbsdata/Bevolking")
+    create_synthetic_data("Schoolmates", 2021, 1_000_000, outpath="cbsdata/Bevolking")
+    create_synthetic_data("Housemates", 2021, 1_000_000, outpath="cbsdata/Bevolking")
