@@ -127,7 +127,7 @@ def format_path(context: str, year: int, cbsdata_path: str = 'cbsdata/Bevolking'
     return path_context, set_types
 
 def validate_query(
-        query: str, 
+        query: str,
         df_sample: Union[pl.DataFrame, pl.LazyFrame, pd.DataFrame],
         df_agg: Union[pl.DataFrame, pl.LazyFrame, pd.DataFrame],
         year: int = 2020,
@@ -146,7 +146,7 @@ def validate_query(
     Returns:
         List[str]: The list of contexts.
     """
-    
+
     contexts = query.strip().split(' -> ')[::-1]
 
     if len(contexts) <= 2:
@@ -162,7 +162,6 @@ def validate_query(
     for context in contexts[1:-1]:
         _ = format_path(context, year, cbsdata_path)
 
-    
 
     return contexts
 
@@ -218,7 +217,7 @@ def transform(
         # Read the edgelist
         path_context, set_types = format_path(context, year, cbsdata_path)
         df_context = _load_context_data(path_context, set_types, lazy)
-        
+
         # Merge with previous data
         df = _merge_context_data(df, df_context) # type: ignore
         # Print statistics (only available if not lazy)
@@ -234,7 +233,7 @@ def transform(
 
     if return_pandas:
         return df.to_pandas()
-    
+
     return df
 
 def _validate_columns(df: Union[pl.DataFrame, pl.LazyFrame, pd.DataFrame], columns: list):
@@ -273,7 +272,6 @@ def _prepare_dataframe(df: Union[pl.DataFrame, pl.LazyFrame, pd.DataFrame], lazy
         return pl.LazyFrame(df)
     else:
         return df
-    
 
 def _load_context_data(path: str, set_types: Set[int], lazy: bool) -> Union[pl.DataFrame, pl.LazyFrame]:
     """
@@ -348,5 +346,4 @@ def _aggregate_data(df: DF, df_agg: DF, agg_cols: str, agg_funcs: List[Callable]
             .groupby(['RINPERSOON_sample', 'RINPERSOONS_sample'])
             .agg([agg_func(agg_col).alias(f"{agg_func.__name__}_{agg_col}") for agg_func in agg_funcs for agg_col in var_aggs])
             .rename({'RINPERSOON_sample': 'RINPERSOON', 'RINPERSOONS_sample': 'RINPERSOONS'})
-            )
-    
+            )    
