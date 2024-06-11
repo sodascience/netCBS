@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "netCBS"
+description = "Package to create aggregated variables from CBS network data (POPNET)"
+authors = [
+    { name = "Javier Garcia-Bernardo", email = "j.garciabernardo@uu.nl" },
+]
+
+dependencies = [
+    "polars>=0.20",
+    "pandas",
+    "numpy"
+]
+
+readme = "README.md"
+requires-python = ">=3.8"
+keywords = ["popnet", "cbs", "network data", "netCBS"]
+license = { file = "LICENSE" }
+
+dynamic = ["version"]
+
+
+classifiers = [
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+]
+
+[tool.setuptools_scm]
+write_to = "netcbs/_version.py"
+
+[tool.setuptools]
+packages = {find = {include = ["netcbs*"]}}
+
+[project.optional-dependencies]
+test = [
+    "ruff", "pytest", "mypy"
+]
+
+[project.urls]
+homepage = "https://github.com/sodascience/netcbs"
+repository = "https://github.com/sodascience/netcbs"
+
+[tool.mypy]
+check_untyped_defs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["pandas.*"]
+ignore_missing_imports = true
