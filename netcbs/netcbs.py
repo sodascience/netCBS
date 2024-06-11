@@ -1,9 +1,14 @@
+"""Package to create network variables (e.g. the mean income of the family members) from CBS network data (POPNET)"""
+
+import logging
+from pathlib import Path
+from typing import Dict, List, Set, Tuple, TypeVar, Union, Callable
+
 import polars as pl
 import pandas as pd
-from numpy import mean, random
-from pathlib import Path
-from typing import Dict, Set, Tuple, Union
-import logging
+
+# TypeVar for DataFrame types
+DF = TypeVar("DF", pl.DataFrame, pl.LazyFrame)
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -62,7 +67,7 @@ context2types: Dict[str, Set[int]] = {
     'Housemates': {401, 402}
 }
 
-def check_context(context: str) -> Tuple[str, Set[int]]:
+def _check_context(context: str) -> Tuple[str, Set[int]]:
     """
     Check and parse the context string to retrieve context type and associated types.
 
@@ -74,18 +79,18 @@ def check_context(context: str) -> Tuple[str, Set[int]]:
     """
 
     # Filter the context and the types: Family[301, 302, 303] -> Family, {301, 302, 303}
-    context, set_types = context.split('[')
+    context, var_set_types = context.split('[')
     context = context.strip()
-    set_types = set_types.replace(']', '').strip()
-    if set_types == 'all':
+    var_set_types = var_set_types.replace(']', '').strip()
+    if var_set_types == 'all':
         set_types = context2types[context]
     else:
-        set_types = {int(_) for _ in set_types.split(',')}
+        set_types = {int(_) for _ in var_set_types.split(',')}
         if set_types - context2types[context]:
             raise ValueError(f'The set types {set_types} are not valid for context {context}. Valid types are: {context2types[context]}')
     return context, set_types
 
-def check_last_version(path: Union[str, Path]) -> int:
+def _check_last_version(path: Union[str, Path]) -> int:
     """
     Check and retrieve the latest version number from the given path.
 
@@ -108,38 +113,78 @@ def format_path(context: str, year: int, cbsdata_path: str = 'cbsdata/Bevolking'
     Format the path for the given context and year.
 
     Args:
-        context (str): The context to format.
+        context (str): The context to format (e.g. Family[301])
         year (int): The year for the data.
         cbsdata_path (str): The base path for CBS data.
 
     Returns:
         Tuple[str, Set[int]]: A tuple containing the formatted path and the set of types.
     """
-    context, set_types = check_context(context)
+    context, set_types = _check_context(context)
     name_path_context = context2path[context]
-    version = check_last_version(f'{cbsdata_path}/{name_path_context}')
+    version = _check_last_version(f'{cbsdata_path}/{name_path_context}')
     path_context = f'{cbsdata_path}/{name_path_context}/{name_path_context}{year}V{version}.csv'
     return path_context, set_types
 
+def validate_query(
+        query: str, 
+        df_sample: Union[pl.DataFrame, pl.LazyFrame, pd.DataFrame],
+        df_agg: Union[pl.DataFrame, pl.LazyFrame, pd.DataFrame],
+        year: int = 2020,
+        cbsdata_path: str = 'cbsdata/Bevolking'
+        ) -> List[str]:
+    """
+    Validate the query and return the contexts.
+
+    Args:
+        query (str): The query string.
+        df_sample (pl.DataFrame): The sample dataframe.
+        df_agg (pl.DataFrame): The aggregation dataframe.
+        year (int): The year for the data.
+        cbsdata_path (str): The base path for CBS data.
+
+    Returns:
+        List[str]: The list of contexts.
+    """
+    
+    contexts = query.strip().split(' -> ')[::-1]
+
+    if len(contexts) <= 2:
+        raise ValueError('Query must contain at least one link')
+    if len(contexts) > 4:
+        logger.warning('The query is too complex, it will take too long or potentially never finish')
+
+    _validate_columns(df_sample, ['RINPERSOON', 'RINPERSOONS'])
+
+    var_aggs = _format_vars_agg(contexts[-1])
+    _validate_columns(df_agg, ['RINPERSOON', 'RINPERSOONS'] + var_aggs)
+
+    for context in contexts[1:-1]:
+        _ = format_path(context, year, cbsdata_path)
+
+    
+
+    return contexts
+
 def transform(
     query: str, 
-    df_sample: pl.DataFrame, 
-    df_agg: pl.DataFrame, 
-    year: int = 2020, 
-    agg_func: Union[pl.Expr, callable] = pl.mean, 
-    return_pandas: bool = False, 
-    lazy: bool = False, 
+    df_sample: Union[pl.DataFrame, pl.LazyFrame, pd.DataFrame],
+    df_agg: Union[pl.DataFrame, pl.LazyFrame, pd.DataFrame],
+    year: int = 2020,
+    agg_func: Union[pl.Expr, Callable] = pl.mean,
+    return_pandas: bool = False,
+    lazy: bool = False,
     cbsdata_path: str = 'cbsdata/Bevolking'
 ) -> Union[pl.DataFrame, pd.DataFrame]:
     """
     Transform the data based on the given query and return the transformed dataframe.
 
     Args:
-        query (str): The query string. It needs to start with "Sample -> ". The end should be the aggregation column, contained in df_agg.
+        query (str): The query string. It needs to start with the variables (contained in df_agg) to be aggregated, e.g. "Income -> ". It needs to end with -> Sample".
         df_sample (pl.DataFrame): The sample dataframe. Should contain at least columns 'RINPERSOON' and 'RINPERSOONS'.
         df_agg (pl.DataFrame): The aggregation dataframe. Should contain columns 'RINPERSOON', 'RINPERSOONS', and the aggregation column.
         year (int): The year for the data.
-        agg_func (Union[pl.Expr, callable]): The aggregation function.
+        agg_func (Union[pl.Expr, Callable]): The aggregation function.
         return_pandas (bool): Whether to return a pandas dataframe.
         lazy (bool): Whether to use lazy evaluation. Set to False for debugging.
         cbsdata_path (str): The base path for CBS data.
@@ -147,21 +192,11 @@ def transform(
     Returns:
         Union[pl.DataFrame, 'pd.DataFrame']: The transformed dataframe.
     """
-    contexts = query.strip().split(' -> ')
 
-    if len(contexts) <= 2:
-        raise ValueError('Query must contain at least one link')
-    if len(contexts) > 4:
-        logger.warning('The query is too complex, it will take too long or potentially never finish')
-
-    for context in contexts[1:-1]:
-        check_context(context)
-
-    validate_columns(df_sample, ['RINPERSOON', 'RINPERSOONS'])
-    validate_columns(df_agg, ['RINPERSOON', 'RINPERSOONS', contexts[-1]])
+    contexts = validate_query(query, df_sample, df_agg, year, cbsdata_path)
 
     # Prepare the dataframe with the sample data. Duplicate ID columsn to recover the sample IDs after merging
-    df = (prepare_dataframe(df_sample, lazy)
+    df = (_prepare_dataframe(df_sample, lazy)
           .with_columns(
               pl.col('RINPERSOON').alias('RINPERSOON_sample'),
               pl.col('RINPERSOONS').alias('RINPERSOONS_sample')
@@ -175,25 +210,26 @@ def transform(
         df_sample = pl.DataFrame(df_sample)
 
     # Prepare the aggregation dataframe
-    df_agg = prepare_dataframe(df_agg, lazy)
+    df_agg = _prepare_dataframe(df_agg, lazy)
 
 
     # For each contaxt
     for context in contexts[1:-1]:
         # Read the edgelist
         path_context, set_types = format_path(context, year, cbsdata_path)
-        df_context = load_context_data(path_context, set_types, lazy)
+        df_context = _load_context_data(path_context, set_types, lazy)
+        
         # Merge with previous data
-        df = merge_context_data(df, df_context)
+        df = _merge_context_data(df, df_context) # type: ignore
         # Print statistics (only available if not lazy)
         if not lazy:
-            logger.info(f'Context {context} added. New data size: {df.shape}')
+            logger.info('Context %s added. New data size: %s', context, df.shape) # type: ignore
 
     # Finally, aggregate data and join with the original sample
-    df = aggregate_data(df, df_agg, contexts[-1], agg_func)
-    df = df_sample.join(df, on=['RINPERSOON', 'RINPERSOONS'], how='left')
+    df = _aggregate_data(df, df_agg, contexts[-1], agg_func)  # type: ignore
+    df = df_sample.join(df, on=['RINPERSOON', 'RINPERSOONS'], how='left') # type: ignore
 
-    if lazy:
+    if isinstance(df, pl.LazyFrame):
         df = df.collect()
 
     if return_pandas:
@@ -201,7 +237,7 @@ def transform(
     
     return df
 
-def validate_columns(df: pl.DataFrame, columns: list):
+def _validate_columns(df: Union[pl.DataFrame, pl.LazyFrame, pd.DataFrame], columns: list):
     """
     Validate that the dataframe contains the specified columns.
 
@@ -216,7 +252,7 @@ def validate_columns(df: pl.DataFrame, columns: list):
         if column not in df.columns:
             raise ValueError(f'The dataframe does not contain the column "{column}"')
 
-def prepare_dataframe(df: pl.DataFrame, lazy: bool) -> pl.DataFrame:
+def _prepare_dataframe(df: Union[pl.DataFrame, pl.LazyFrame, pd.DataFrame], lazy: bool) -> Union[pl.DataFrame, pl.LazyFrame]:
     """
     Prepare the dataframe by removing duplicates and converting to lazy if needed.
 
@@ -232,9 +268,14 @@ def prepare_dataframe(df: pl.DataFrame, lazy: bool) -> pl.DataFrame:
         if df[['RINPERSOON', 'RINPERSOONS']].is_duplicated().any():
             df = df.unique(subset=['RINPERSOON', 'RINPERSOONS'])
             logger.info('The dataframe contained duplicated entries, they were removed. New data size: %s', df.shape)
-    return pl.LazyFrame(df) if lazy else df
 
-def load_context_data(path: str, set_types: Set[int], lazy: bool) -> pl.DataFrame:
+    if lazy:
+        return pl.LazyFrame(df)
+    else:
+        return df
+    
+
+def _load_context_data(path: str, set_types: Set[int], lazy: bool) -> Union[pl.DataFrame, pl.LazyFrame]:
     """
     Load the context data from the specified path.
 
@@ -246,13 +287,17 @@ def load_context_data(path: str, set_types: Set[int], lazy: bool) -> pl.DataFram
     Returns:
         pl.DataFrame: The loaded context data.
     """
-    df_context = pl.scan_csv(path) if lazy else pl.read_csv(path)
+    if lazy:
+        df_context: Union[pl.DataFrame, pl.LazyFrame] = pl.scan_csv(path)
+    else:
+        df_context = pl.read_csv(path)
+    
     return (df_context
             .filter(pl.col('RELATIE').is_in(set_types))
             .select(['RINPERSOON', 'RINPERSOONS', 'RINPERSOONRELATIE', 'RINPERSOONSRELATIE'])
             )
 
-def merge_context_data(df: pl.DataFrame, df_context: pl.DataFrame) -> pl.DataFrame:
+def _merge_context_data(df: DF, df_context: DF) -> DF:
     """
     Merge the context data with the main dataframe.
 
@@ -268,22 +313,40 @@ def merge_context_data(df: pl.DataFrame, df_context: pl.DataFrame) -> pl.DataFra
             .rename({'RINPERSOONRELATIE': 'RINPERSOON', 'RINPERSOONSRELATIE': 'RINPERSOONS'})
             )
 
-def aggregate_data(df: pl.DataFrame, df_agg: pl.DataFrame, agg_col: str, agg_func: Union[pl.Expr, callable]) -> pl.DataFrame:
+def _format_vars_agg(agg_cols: str) -> List[str]:
+    """
+    Format the aggregation columns.
+
+    Args:
+        agg_cols (str): The aggregation columns.
+
+    Returns:
+        List[str]: The formatted aggregation columns.
+    """
+    agg_cols = agg_cols.strip().replace(']', '').replace('[', '')
+    var_aggs = [_.strip() for _ in agg_cols.split(',')]
+
+    return var_aggs
+
+def _aggregate_data(df: DF, df_agg: DF, agg_cols: str, agg_funcs: List[Callable]) -> DF:
     """
     Aggregate the data based on the specified column and function.
 
     Args:
         df (pl.DataFrame): The main dataframe.
         df_agg (pl.DataFrame): The aggregation dataframe.
-        agg_col (str): The column to aggregate.
-        agg_func (Union[pl.Expr, callable]): The aggregation function.
+        agg_cols (str): The column to aggregate.
+        agg_func (List[Callable]): The aggregation functions.
 
     Returns:
         pl.DataFrame: The aggregated dataframe.
     """
+
+    var_aggs = _format_vars_agg(agg_cols)
+
     return (df.join(df_agg, on=['RINPERSOON', 'RINPERSOONS'], how='inner')
             .groupby(['RINPERSOON_sample', 'RINPERSOONS_sample'])
-            .agg(agg_func(agg_col))
+            .agg([agg_func(agg_col).alias(f"{agg_func.__name__}_{agg_col}") for agg_func in agg_funcs for agg_col in var_aggs])
             .rename({'RINPERSOON_sample': 'RINPERSOON', 'RINPERSOONS_sample': 'RINPERSOONS'})
             )
     
