@@ -1,6 +1,10 @@
-import polars as pl
-from numpy import random
+"""Create synthetic data to mimic CBS data and test the package."""
+
 from pathlib import Path
+from numpy import random
+import polars as pl
+
+
 
 context2path = {
     "Family": "FAMILIENETWERKTAB",
@@ -20,7 +24,7 @@ context2types = {
 }
 
 # Create synthetic data for each type of context
-def create_synthetic_data(context, year, N, v=1, outpath="cbsdata/Bevolking"):
+def create_synthetic_data(context, year, N, N_ids=500_000, v=1, outpath="cbsdata/Bevolking"):
     """
     Create synthetic data for a given context and year
 
@@ -40,6 +44,8 @@ def create_synthetic_data(context, year, N, v=1, outpath="cbsdata/Bevolking"):
     None
 
     """
+    random.seed(0)
+
     path = context2path[context]
     outpath = f"{outpath}/{path}/{path}{year}V{v}.csv"
     # create folder if it does not exist using Pathlib
@@ -47,9 +53,9 @@ def create_synthetic_data(context, year, N, v=1, outpath="cbsdata/Bevolking"):
     set_types = context2types[context]
 
     # Create a dataframe with 3 columns, RINPERSOON, RINPERSOONS (R, S) and RELATIE
-    N_extra = int(N*1.2)
-    RP_ego = random.choice(range(100_000_000, 100_500_000), N_extra, replace=True)
-    RP_alter = random.choice(range(100_000_000, 100_500_000), N_extra, replace=True)
+    N_extra = int(N*1.5)
+    RP_ego = random.choice(range(100_000_000, 100_000_000+N_ids), N_extra, replace=True)
+    RP_alter = random.choice(range(100_000_000, 100_000_000+N_ids), N_extra, replace=True)
     relatie = random.choice(set_types, N_extra, replace=True)
     df = pl.DataFrame({"RINPERSOON": RP_ego, "RINPERSOONS":  ["R"]*N_extra,
                        "RINPERSOONRELATIE": RP_alter, "RINPERSOONSRELATIE":  ["R"]*N_extra,
