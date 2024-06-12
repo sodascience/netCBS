@@ -11,19 +11,19 @@ pip install git+ssh://git@github.com/netcbs/remode.git
 
 See [notebook](`tutorial_netCBS.ipynb`) for accessible information and examples.
 
-### Only for testing locally: create synthetic data for year 2021 (1M links) in the folder cbsdata/Bevolking
+For testing locally: run this script to create synthetic data (1M of random edges for year 2021). The files are saved to the folder "cbsdata/Bevolking"
 ```bash
 python3 netcbs/create_synthetitcata.py
 ```
 
-### Create network measures (e.g. the income of the parents (link type 301) of student's classmates)
+### Create network measures (e.g. the average income and age of the parents (link type 301) of the classmats of children in the sample)
 ```python
-query =  "Income -> Family[301] -> Schoolmates[all] -> Sample"
+query =  "[Income, Age] -> Family[301] -> Schoolmates[all] -> Sample"
 df = netcbs.transform(query, 
                      df_sample = df_sample,  # dataset with the sample to study
                      df_agg = df_agg, # dataset with the income variable
                      year=2021, # year to study
-                     cbsdata_path='cbsdata/Bevolking', # path to the CBS data, in this example this corresponds to synthetic data  
+                     cbsdata_path='G:/Bevolking', # path to the CBS data
                      agg_func=pl.mean, # calculate the average
                      return_pandas=False, # returns a pandas dataframe instead of a polars dataframe
                      lazy=True # use polars lazy evaluation (faster/less memory usage)
@@ -31,9 +31,9 @@ df = netcbs.transform(query,
 
 ```
 
-## How the Library Works
+## How does the library work?
 ### Query system
-The library uses a query system to specify the relationships between the main sample dataframe and the context data. The query consists of a series of context types separated by arrows (->), with optional relationship types in square brackets. For example, the query `"Income -> Family[301] -> Schoolmates[all] -> Sample"` specifies that the income of the parents of the student's classmates should be calculated based on the provided sample dataframe.
+The library uses a query system to specify the relationships between the main sample dataframe and the context data. The query consists of a series of context types separated by arrows (->), with optional relationship types in square brackets. For example, the query `"[Income] -> Family[301] -> Schoolmates[all] -> Sample"` specifies that the income of the parents of the student's classmates should be calculated based on the provided sample dataframe.
 
 ### Data used:
 The library checks the latest verion of each network file for the year specified in the `transform` function. 
@@ -43,19 +43,15 @@ The library removes duplicate entries from the df_sample and df_agg dataframes, 
 ### Transformation fo the query
 The `validate_query` function (called automatically by the `transform` function) ensures that the query string is correctly formatted and that all necessary columns are present in the input dataframes. It splits the query into individual contexts and verifies each part, raising errors for any issues found.
 
-The different network files (contexts) are merged (inner join) consecutively based on the relationship columns specified in the query. The resulting dataframe is then aggregated based on the aggregation function(e.g., pl.mean, pl.sum) specified in the `transform` function.
+The different network files (contexts) are merged (inner join) consecutively based on the relationship columns specified in the query. The resulting dataframe is then aggregated based on the aggregation function (e.g., pl.mean, pl.sum) specified in the `transform` function.
 
-We recomment to use the polars lazy evaluation (lazy=True) to reduce memory usage and speed up the calculations. For debugging this can be disabled by setting lazy=False.
+We recommend to use the polars lazy evaluation (lazy=True) to reduce memory usage and speed up the calculations. For debugging this can be disabled by setting lazy=False.
 
 
 ## Contributing
-Contributions are what make the open source community an amazing place
-to learn, inspire, and create. Any contributions you make are **greatly
-appreciated**.
+Contributions are what make the open source community an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
 
-Please refer to the
-[CONTRIBUTING](https://github.com/sodascience/netcbs/blob/main/CONTRIBUTING.md)
-file for more information on issues and pull requests.
+Please refer to the [CONTRIBUTING](https://github.com/sodascience/netcbs/blob/main/CONTRIBUTING.md) file for more information on issues and pull requests.
 
 ## License and citation
 
