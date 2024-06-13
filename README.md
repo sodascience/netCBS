@@ -9,7 +9,7 @@ pip install git+ssh://git@github.com/netcbs/remode.git
 
 ## Usage
 
-See [notebook](`tutorial_netCBS.ipynb`) for accessible information and examples.
+See [notebook](tutorial_netCBS.ipynb) for accessible information and examples.
 
 For testing locally: run this script to create synthetic data (1M of random edges for year 2021). The files are saved to the folder "cbsdata/Bevolking"
 ```bash
