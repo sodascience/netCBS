@@ -47,7 +47,7 @@ def create_synthetic_data(context, year, N, N_ids=500_000, v=1, outpath="cbsdata
     random.seed(0)
 
     path = context2path[context]
-    outpath = f"{outpath}/{path}/{path}{year}V{v}.csv"
+    outpath = f"{outpath}/{path}/{path[:-3]}{year}TABV{v}.csv"
     # create folder if it does not exist using Pathlib
     Path(outpath).parent.mkdir(parents=True, exist_ok=True)
     set_types = context2types[context]
@@ -66,7 +66,7 @@ def create_synthetic_data(context, year, N, N_ids=500_000, v=1, outpath="cbsdata
     df = df.unique().head(N)
 
     # Save the dataframe to a CSV file
-    df.write_csv(outpath)
+    df.write_csv(outpath, separator=";")
 
 
 if __name__ == "__main__":
