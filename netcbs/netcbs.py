@@ -123,7 +123,7 @@ def format_path(context: str, year: int, cbsdata_path: str = 'cbsdata/Bevolking'
     context, set_types = _check_context(context)
     name_path_context = context2path[context]
     version = _check_last_version(f'{cbsdata_path}/{name_path_context}')
-    path_context = f'{cbsdata_path}/{name_path_context}/{name_path_context}{year}V{version}.csv'
+    path_context = f'{cbsdata_path}/{name_path_context}/{name_path_context[:-3]}{year}TABV{version}.csv'
     return path_context, set_types
 
 def validate_query(
@@ -162,18 +162,44 @@ def validate_query(
     for context in contexts[1:-1]:
         _ = format_path(context, year, cbsdata_path)
 
-
     return contexts
 
+def convert_to_polars(df: Union[pl.DataFrame, pl.LazyFrame, pd.DataFrame], lazy: bool) -> Union[pl.DataFrame, pl.LazyFrame]:
+    """
+    Convert the dataframe to a polars dataframe.
+
+    Args:
+        df (Union[pl.DataFrame, pl.LazyFrame, pd.DataFrame]): The dataframe to convert.
+        lazy (bool): Whether to convert to a lazy dataframe.
+
+    Returns:
+        Union[pl.DataFrame, pl.LazyFrame]: The converted dataframe.
+    """
+    if isinstance(df, pd.DataFrame):
+        if lazy:
+            return pl.LazyFrame(df)
+        else:
+            return pl.DataFrame(df)
+    elif isinstance(df, pl.DataFrame):
+        if lazy:
+            return df.lazy()
+        else:
+            return df
+    elif isinstance(df, pl.LazyFrame):
+        if not lazy:
+            return df.collect()
+        else:
+            return df
+    
 def transform(
     query: str, 
     df_sample: Union[pl.DataFrame, pl.LazyFrame, pd.DataFrame],
     df_agg: Union[pl.DataFrame, pl.LazyFrame, pd.DataFrame],
     year: int = 2020,
-    agg_func: Union[pl.Expr, Callable] = pl.mean,
+    agg_funcs: List[Callable] = [pl.mean],
     return_pandas: bool = False,
     lazy: bool = False,
-    cbsdata_path: str = 'cbsdata/Bevolking'
+    cbsdata_path: str = 'G:/Bevolking'
 ) -> Union[pl.DataFrame, pd.DataFrame]:
     """
     Transform the data based on the given query and return the transformed dataframe.
@@ -193,24 +219,23 @@ def transform(
     """
 
     contexts = validate_query(query, df_sample, df_agg, year, cbsdata_path)
+    
+    df_sample = convert_to_polars(df_sample, lazy)
+    df_agg = convert_to_polars(df_agg, lazy)
 
     # Prepare the dataframe with the sample data. Duplicate ID columsn to recover the sample IDs after merging
-    df = (_prepare_dataframe(df_sample, lazy)
+    df = (_prepare_dataframe(df_sample)
           .with_columns(
               pl.col('RINPERSOON').alias('RINPERSOON_sample'),
               pl.col('RINPERSOONS').alias('RINPERSOONS_sample')
           )
           )
 
-    # For consistency in the joins
-    if lazy:
-        df_sample = pl.LazyFrame(df_sample)
-    else:
-        df_sample = pl.DataFrame(df_sample)
-
     # Prepare the aggregation dataframe
-    df_agg = _prepare_dataframe(df_agg, lazy)
+    df_agg = _prepare_dataframe(df_agg)
 
+    if not lazy:
+        logger.info('Sample size: %s', df.shape) # type: ignore
 
     # For each contaxt
     for context in contexts[1:-1]:
@@ -225,7 +250,7 @@ def transform(
             logger.info('Context %s added. New data size: %s', context, df.shape) # type: ignore
 
     # Finally, aggregate data and join with the original sample
-    df = _aggregate_data(df, df_agg, contexts[-1], agg_func)  # type: ignore
+    df = _aggregate_data(df, df_agg, contexts[-1], agg_funcs)  # type: ignore
     df = df_sample.join(df, on=['RINPERSOON', 'RINPERSOONS'], how='left') # type: ignore
 
     if isinstance(df, pl.LazyFrame):
@@ -251,7 +276,7 @@ def _validate_columns(df: Union[pl.DataFrame, pl.LazyFrame, pd.DataFrame], colum
         if column not in df.columns:
             raise ValueError(f'The dataframe does not contain the column "{column}"')
 
-def _prepare_dataframe(df: Union[pl.DataFrame, pl.LazyFrame, pd.DataFrame], lazy: bool) -> Union[pl.DataFrame, pl.LazyFrame]:
+def _prepare_dataframe(df: Union[pl.DataFrame, pl.LazyFrame]) -> Union[pl.DataFrame, pl.LazyFrame]:
     """
     Prepare the dataframe by removing duplicates and converting to lazy if needed.
 
@@ -262,16 +287,16 @@ def _prepare_dataframe(df: Union[pl.DataFrame, pl.LazyFrame, pd.DataFrame], lazy
     Returns:
         pl.DataFrame: The prepared dataframe.
     """
-    df = pl.DataFrame(df)
-    if 'RINPERSOON' in df.columns and 'RINPERSOONS' in df.columns:
+
+    if isinstance(df, pl.LazyFrame):
+        df = df.unique(subset=['RINPERSOON', 'RINPERSOONS'])
+        logger.info('Dropping duplicated entries (if any). Check this before submitting the query or set lazy==False')
+    else:
         if df[['RINPERSOON', 'RINPERSOONS']].is_duplicated().any():
             df = df.unique(subset=['RINPERSOON', 'RINPERSOONS'])
             logger.info('The dataframe contained duplicated entries, they were removed. New data size: %s', df.shape)
-
-    if lazy:
-        return pl.LazyFrame(df)
-    else:
-        return df
+    
+    return df
 
 def _load_context_data(path: str, set_types: Set[int], lazy: bool) -> Union[pl.DataFrame, pl.LazyFrame]:
     """
@@ -286,9 +311,9 @@ def _load_context_data(path: str, set_types: Set[int], lazy: bool) -> Union[pl.D
         pl.DataFrame: The loaded context data.
     """
     if lazy:
-        df_context: Union[pl.DataFrame, pl.LazyFrame] = pl.scan_csv(path)
+        df_context: Union[pl.DataFrame, pl.LazyFrame] = pl.scan_csv(path, separator=";", schema_overrides={"RINPERSOON": pl.String, "RINPERSOONRELATIE": pl.String})
     else:
-        df_context = pl.read_csv(path)
+        df_context = pl.read_csv(path, separator=";", schema_overrides={"RINPERSOON": pl.String, "RINPERSOONRELATIE": pl.String})
     
     return (df_context
             .filter(pl.col('RELATIE').is_in(set_types))
@@ -334,7 +359,7 @@ def _aggregate_data(df: DF, df_agg: DF, agg_cols: str, agg_funcs: List[Callable]
         df (pl.DataFrame): The main dataframe.
         df_agg (pl.DataFrame): The aggregation dataframe.
         agg_cols (str): The column to aggregate.
-        agg_func (List[Callable]): The aggregation functions.
+        agg_funcs (List[Callable]): The aggregation functions.
 
     Returns:
         pl.DataFrame: The aggregated dataframe.
@@ -347,3 +372,9 @@ def _aggregate_data(df: DF, df_agg: DF, agg_cols: str, agg_funcs: List[Callable]
             .agg([agg_func(agg_col).alias(f"{agg_func.__name__}_{agg_col}") for agg_func in agg_funcs for agg_col in var_aggs])
             .rename({'RINPERSOON_sample': 'RINPERSOON', 'RINPERSOONS_sample': 'RINPERSOONS'})
             )    
+
+
+    
+
+
+
