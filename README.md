@@ -11,12 +11,8 @@ pip install git+https://git@github.com/sodascience/netcbs.git@main
 
 See [notebook](tutorial_netCBS.ipynb) for accessible information and examples.
 
-For testing locally: run this script to create synthetic data (1M of random edges for year 2021). The files are saved to the folder "cbsdata/Bevolking"
-```bash
-python3 netcbs/create_synthetitcata.py
-```
 
-### Create network measures (e.g. the average income and age of the parents (link type 301) of the classmats of children in the sample)
+### Create network measures (e.g. the average income and age of the parents (link type 301) of the classmates of children in the sample)
 ```python
 query =  "[Income, Age] -> Family[301] -> Schoolmates[all] -> Sample"
 df = netcbs.transform(query, 
