@@ -4,7 +4,7 @@ Package to efficiently create network measures using CBS networks (POPNET) in th
 ## Installation
 
 ```bash
-pip install git+ssh://git@github.com/netcbs/remode.git
+pip install git+ssh://git@github.com/sodascience/netcbs.git
 ```
 
 ## Usage
