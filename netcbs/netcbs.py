@@ -27,8 +27,8 @@ codebook: Dict[int, str] = {
     306: 'Full sibling',
     307: 'Half sibling',
     308: 'Unknown sibling',
-    309: 'Full cousin',
-    310: 'Cousin',
+    309: 'Cousin',
+    310: 'Nephew/Niece',
     311: 'Aunt/Uncle',
     312: 'Partner - married',
     313: 'Partner - not married',
@@ -368,7 +368,7 @@ def _aggregate_data(df: DF, df_agg: DF, agg_cols: str, agg_funcs: List[Callable]
     var_aggs = _format_vars_agg(agg_cols)
 
     return (df.join(df_agg, on=['RINPERSOON', 'RINPERSOONS'], how='inner')
-            .groupby(['RINPERSOON_sample', 'RINPERSOONS_sample'])
+            .group_by(['RINPERSOON_sample', 'RINPERSOONS_sample'])
             .agg([agg_func(agg_col).alias(f"{agg_func.__name__}_{agg_col}") for agg_func in agg_funcs for agg_col in var_aggs])
             .rename({'RINPERSOON_sample': 'RINPERSOON', 'RINPERSOONS_sample': 'RINPERSOONS'})
             )    
