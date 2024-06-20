@@ -190,6 +190,9 @@ def convert_to_polars(df: Union[pl.DataFrame, pl.LazyFrame, pd.DataFrame], lazy:
             return df.collect()
         else:
             return df
+    else:
+        raise ValueError('The dataframe is not a valid type')
+        
     
 def transform(
     query: str, 
