@@ -20,7 +20,7 @@ df = netcbs.transform(query,
                      df_agg = df_agg, # dataset with the income variable
                      year=2021, # year to study
                      cbsdata_path='G:/Bevolking', # path to the CBS data
-                     agg_func=pl.mean, # calculate the average
+                     agg_funcs=[pl.mean, pl.sum, pl.count], # calculate the average
                      return_pandas=False, # returns a pandas dataframe instead of a polars dataframe
                      lazy=True # use polars lazy evaluation (faster/less memory usage)
                      )
