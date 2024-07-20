@@ -11,7 +11,7 @@ authors = [
 ]
 
 dependencies = [
-    "polars>=0.20",
+    "polars>=1.0",
     "pandas",
     "numpy"
 ]
