@@ -11,12 +11,8 @@ pip install git+https://git@github.com/sodascience/netcbs.git@main
 
 See [notebook](tutorial_netCBS.ipynb) for accessible information and examples.
 
-For testing locally: run this script to create synthetic data (1M of random edges for year 2021). The files are saved to the folder "cbsdata/Bevolking"
-```bash
-python3 netcbs/create_synthetitcata.py
-```
 
-### Create network measures (e.g. the average income and age of the parents (link type 301) of the classmats of children in the sample)
+### Create network measures (e.g. the average income and age of the parents (link type 301) of the classmates of children in the sample)
 ```python
 query =  "[Income, Age] -> Family[301] -> Schoolmates[all] -> Sample"
 df = netcbs.transform(query, 
@@ -24,7 +20,7 @@ df = netcbs.transform(query,
                      df_agg = df_agg, # dataset with the income variable
                      year=2021, # year to study
                      cbsdata_path='G:/Bevolking', # path to the CBS data
-                     agg_func=pl.mean, # calculate the average
+                     agg_funcs=[pl.mean, pl.sum, pl.count], # calculate the average
                      return_pandas=False, # returns a pandas dataframe instead of a polars dataframe
                      lazy=True # use polars lazy evaluation (faster/less memory usage)
                      )
