@@ -28,7 +28,7 @@ jobs:
 
     - name: Lint with ruff
       run: |
-        ruff netcbs/*.py
+        ruff check netcbs/*.py
       continue-on-error: true
 
     - name: Check types with mypy
