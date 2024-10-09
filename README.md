@@ -1,10 +1,10 @@
 # netCBS
-Package to efficiently create network measures using CBS networks (POPNET) in the RA. For example you may be interested in calculating the average income of the parents of the classmates of a student. This package allows you to do this in a fast and efficient way.
+A Python library to efficiently create network measures using CBS networks (POPNET) in the RA. For example you may be interested in calculating the average income of the parents of the classmates of a student. This package allows you to do this in a fast and efficient way.
 
 ## Installation
 
 ```bash
-pip install git+https://git@github.com/sodascience/netcbs.git@main
+pip install netcbs
 ```
 
 ## Usage
@@ -53,7 +53,7 @@ Please refer to the [CONTRIBUTING](https://github.com/sodascience/netcbs/blob/ma
 
 The package `netCBS` is published under an MIT license. When using `netCBS` for academic work, please cite:
 ```
-    TODO
+Garcia-Bernardo, Javier (2024). netCBS: A Python library to efficiently create network measures using CBS networks (POPNET) in the RA (0.1). Zenodo. 10.5281/zenodo.13908120
 ```
 
 ## Contact
