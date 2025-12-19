@@ -1,33 +1,35 @@
 [build-system]
-requires = ["setuptools>=42", "wheel"]
+requires = [
+    "setuptools>=61.0",
+    "wheel",
+    "setuptools-scm>=8.0",
+]
 build-backend = "setuptools.build_meta"
 
-
 [project]
-name = "netCBS"
+name = "netcbs"
 description = "Package to create aggregated variables from CBS network data"
+readme = "README.md"
+requires-python = ">=3.8"
 authors = [
     { name = "Javier Garcia-Bernardo", email = "j.garciabernardo@uu.nl" },
 ]
+keywords = ["popnet", "cbs", "network data", "netcbs"]
 
 dependencies = [
     "polars>=1.0",
     "pandas",
     "duckdb",
     "pyarrow",
-    "numpy"
+    "numpy",
 ]
 
-readme = "README.md"
-requires-python = ">=3.8"
-keywords = ["popnet", "cbs", "network data", "netCBS"]
-license = { file = "LICENSE" }
-
+# You are using setuptools-scm, so version is dynamic
 dynamic = ["version"]
 
+license = { file = "LICENSE" }
 
 classifiers = [
-    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
@@ -36,22 +38,29 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Operating System :: OS Independent",
+    # Pick ONE license classifier that matches your LICENSE file:
+    # "License :: OSI Approved :: MIT License",
+    # "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
 ]
-
-[tool.setuptools_scm]
-write_to = "netcbs/_version.py"
-
-[tool.setuptools]
-packages = {find = {include = ["netcbs*"]}}
 
 [project.optional-dependencies]
 test = [
-    "ruff", "pytest", "mypy"
+    "ruff",
+    "pytest",
+    "mypy",
 ]
 
 [project.urls]
 homepage = "https://github.com/sodascience/netcbs"
 repository = "https://github.com/sodascience/netcbs"
+
+[tool.setuptools]
+packages = { find = { include = ["netcbs*"] } }
+
+[tool.setuptools_scm]
+write_to = "netcbs/_version.py"
+# Recommended: ensure local version tags don't break PyPI uploads
+local_scheme = "no-local-version"
 
 [tool.mypy]
 check_untyped_defs = true
