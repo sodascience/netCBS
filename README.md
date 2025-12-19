@@ -1,6 +1,8 @@
 # netCBS
 `netCBS` efficiently creates network-based measures using CBS POPNET network tables (e.g. family, colleagues, neighbors, schoolmates, housemates). For example: compute the average income of a person’s parents, or the average income of the parents of their classmates, using CBS network links.
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17992329.svg)](https://doi.org/10.5281/zenodo.17992329)
+
 
 ## Installation
 
@@ -112,7 +114,7 @@ Please refer to the repository’s CONTRIBUTING guide for issues and pull reques
 ## License and citation
 
 `netCBS` is published under the MIT license.  
-For academic citation: `Garcia-Bernardo, J. (2024). netCBS: Package to efficiently create network measures using CBS networks in the RA. (v0.1). Zenodo. https://doi.org/10.5281/zenodo.13908121`
+For academic citation: `Garcia-Bernardo, J. (2025). netCBS: Package to efficiently create network measures using CBS networks in the RA. Zenodo. https://doi.org/10.5281/zenodo.17992329`
 
 ## Contact
 
