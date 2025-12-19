@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Dict, List, Set, Tuple, Union, Sequence
+from typing import Dict, List, Set, Tuple, Union, Sequence, cast
 
 import duckdb
 import pandas as pd
@@ -453,7 +453,7 @@ def transform(
               ON result.RINPERSOON = sample.RINPERSOON
         """).fetch_arrow_table()
 
-    df_res = pl.from_arrow(arrow_res).select(
-        pl.all().exclude(["RINPERSOONsample", "RINPERSOON_1"])
-    )
+    df_res = cast(pl.DataFrame, pl.from_arrow(arrow_res))
+    df_res = df_res.select(pl.all().exclude(["RINPERSOONsample", "RINPERSOON_1"])) 
+
     return df_res.to_pandas() if return_pandas else df_res
