@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "netCBS"
-description = "Package to create aggregated variables from CBS network data (POPNET)"
+description = "Package to create aggregated variables from CBS network data"
 authors = [
     { name = "Javier Garcia-Bernardo", email = "j.garciabernardo@uu.nl" },
 ]
@@ -13,6 +13,8 @@ authors = [
 dependencies = [
     "polars>=1.0",
     "pandas",
+    "duckdb",
+    "pyarrow",
     "numpy"
 ]
 
@@ -32,6 +34,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Operating System :: OS Independent",
 ]
 
