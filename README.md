@@ -112,7 +112,7 @@ Please refer to the repository’s CONTRIBUTING guide for issues and pull reques
 ## License and citation
 
 `netCBS` is published under the MIT license.  
-For academic citation: Garcia-Bernardo, J. (2024). netCBS: Package to efficiently create network measures using CBS networks in the RA. (v0.1). Zenodo. https://doi.org/10.5281/zenodo.13908121
+For academic citation: `Garcia-Bernardo, J. (2024). netCBS: Package to efficiently create network measures using CBS networks in the RA. (v0.1). Zenodo. https://doi.org/10.5281/zenodo.13908121`
 
 ## Contact
 
